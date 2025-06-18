@@ -1,6 +1,6 @@
 {
         "dependencies": [
-                "openssl"
+                "lua"
         ],
         "vcpkg-configuration": {
                 "overlay-ports": [

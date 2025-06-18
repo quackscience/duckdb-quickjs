@@ -1,0 +1,24 @@
+# name: test/sql/lua.test
+# description: test lua extension
+# group: [sql]
+
+# Before we load the extension, this will fail
+statement error
+SELECT lua('Sam');
+----
+Catalog Error: Scalar Function with name lua does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require lua
+
+# Confirm the extension works
+query I
+SELECT lua('a = 5');
+----
+Lua Sam 🐥
+
+# Invalid code
+query I
+SELECT lua('aaa');
+----
+Lua Sam 🐥
