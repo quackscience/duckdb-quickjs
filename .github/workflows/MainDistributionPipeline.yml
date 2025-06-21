@@ -38,4 +38,4 @@ jobs:
       duckdb_version: v1.3.1
       ci_tools_version: main
       extension_name: lua
-      format_checks: 'format;tidy'
+      format_checks: 'format' # ';tidy' doesn't work with vcpkg
