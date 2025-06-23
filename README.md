@@ -115,7 +115,7 @@ SELECT quickjs_eval('(a) => a.nonExistentMethod()', 1);
 
 ## Requirements
 
-- DuckDB 0.9.0 or later
+- DuckDB 1.3.1 or later
 - C++11 compatible compiler
 - CMake 3.16 or later
 
