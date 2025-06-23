@@ -5,8 +5,11 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+
+#ifndef DUCKDB_CPP_EXTENSION_ENTRY
+#include "duckdb/main/extension_util.hpp"
+#endif
 
 #include "quickjs.h"
 
@@ -39,6 +42,7 @@ static void QuickJSExecute(DataChunk &args, ExpressionState &state, Vector &resu
 	});
 }
 
+#ifdef DUCKDB_CPP_EXTENSION_ENTRY
 static void LoadInternal(ExtensionLoader &loader) {
 	loader.SetDescription("QuickJS embedded scripting language");
 
@@ -46,10 +50,24 @@ static void LoadInternal(ExtensionLoader &loader) {
 	    ScalarFunction("quickjs", {LogicalType::VARCHAR}, LogicalType::VARCHAR, QuickJSExecute);
 	loader.RegisterFunction(quickjs_scalar_function);
 }
+#else
+static void LoadInternal(DatabaseInstance &instance) {
+	auto quickjs_scalar_function =
+	    ScalarFunction("quickjs", {LogicalType::VARCHAR}, LogicalType::VARCHAR, QuickJSExecute);
+	ExtensionUtil::RegisterFunction(instance, quickjs_scalar_function);
+}
+#endif
 
+#ifdef DUCKDB_CPP_EXTENSION_ENTRY
 void QuickjsExtension::Load(ExtensionLoader &loader) {
 	LoadInternal(loader);
 }
+#else
+void QuickjsExtension::Load(DuckDB &db) {
+	LoadInternal(*db.instance);
+}
+#endif
+
 std::string QuickjsExtension::Name() {
 	return "quickjs";
 }
@@ -66,7 +84,18 @@ std::string QuickjsExtension::Version() const {
 
 extern "C" {
 
+#ifdef DUCKDB_CPP_EXTENSION_ENTRY
 DUCKDB_CPP_EXTENSION_ENTRY(quickjs, loader) {
 	duckdb::LoadInternal(loader);
+}
+#else
+DUCKDB_EXTENSION_API void quickjs_init(duckdb::DatabaseInstance &db) {
+	duckdb::DuckDB db_wrapper(db);
+	db_wrapper.LoadExtension<duckdb::QuickjsExtension>();
+}
+#endif
+
+DUCKDB_EXTENSION_API const char *quickjs_version() {
+	return duckdb::DuckDB::LibraryVersion();
 }
 }
