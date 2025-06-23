@@ -13,12 +13,68 @@ require lua
 
 # Confirm the extension works
 query I
-SELECT lua('a = 5');
+SELECT lua('return 1 + 2');
 ----
-Lua Sam 🐥
+3
+
+query I
+SELECT lua('return "aa" .. "bb"');
+----
+aabb
+
+query I
+SELECT lua('return 1 > 2');
+----
+false
+
+query I
+SELECT lua('return 1 < 2');
+----
+true
+
+query I
+SELECT lua('1 < 2');
+----
+[string "line"]:1: unexpected symbol near '1'
 
 # Invalid code
 query I
 SELECT lua('aaa');
 ----
-Lua Sam 🐥
+[string "line"]:1: syntax error near <eof>
+
+query I
+SELECT lua('return context', 'abc');
+----
+abc
+
+query I
+SELECT lua('return "aa" .. context', 'cc');
+----
+aacc
+
+query I
+SELECT lua('return 1 > 2', '');
+----
+false
+
+query I
+SELECT lua('return 1 < 2', 'nulllllll');
+----
+true
+
+query I
+SELECT lua('return 1 < 2', 'NULL');
+----
+true
+
+query I
+SELECT lua('1 < 2', 'abcdefghijkl');
+----
+[string "line"]:1: unexpected symbol near '1'
+
+# Invalid code
+query I
+SELECT lua('aaa', 'abcdef');
+----
+[string "line"]:1: syntax error near <eof>
