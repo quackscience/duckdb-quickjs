@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
 
-# Set extension name here
 set(TARGET_NAME quickjs)
 
 # DuckDB's extension distribution supports vcpkg. As such, dependencies can be added in ./vcpkg.json and then
