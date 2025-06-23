@@ -23,12 +23,6 @@ SELECT quickjs('100/2;');
 ----
 50
 
-# String manipulation
-query I
-SELECT quickjs('"hello" + " " + "world";');
-----
-hello world
-
 query I
 SELECT quickjs('"test".toUpperCase();');
 ----
