@@ -30,9 +30,6 @@ Executes a JavaScript function with the provided arguments and returns the resul
 SELECT quickjs_eval('(a, b) => a + b', 5, 3);
 -- Returns: 8
 
-SELECT quickjs_eval('(arr) => arr.map(x => x * 2)', '[1, 2, 3, 4, 5]');
--- Returns: [2,4,6,8,10]
-
 SELECT quickjs_eval('(str) => str.toUpperCase()', 'hello world');
 -- Returns: "HELLO WORLD"
 ```
@@ -42,73 +39,66 @@ Executes JavaScript code that returns an array and returns each array element as
 
 ```sql
 -- Simple array
-SELECT * FROM quickjs('[1, 2, 3, 4, 5]');
--- Returns:
--- 1
--- 2
--- 3
--- 4
--- 5
-
--- Array with mixed types
-SELECT * FROM quickjs('[1, 2, 3, 4, 5, "hello", "world"]');
--- Returns:
--- 1
--- 2
--- 3
--- 4
--- 5
--- "hello"
--- "world"
+D SELECT * FROM quickjs('[1, 2, 3, 4, 5]');
+┌────────┐
+│ result │
+│  json  │
+├────────┤
+│ 1      │
+│ 2      │
+│ 3      │
+│ 4      │
+│ 5      │
+└────────┘
 
 -- Array of objects
-SELECT * FROM quickjs('[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]');
--- Returns:
--- {"name":"Alice","age":30}
--- {"name":"Bob","age":25}
+D SELECT * FROM quickjs('[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]');
+┌───────────────────────────┐
+│          result           │
+│           json            │
+├───────────────────────────┤
+│ {"name":"Alice","age":30} │
+│ {"name":"Bob","age":25}   │
+└───────────────────────────┘
+
 
 -- JavaScript computation
-SELECT * FROM quickjs('[1, 2, 3, 4, 5].map(x => x * 2)');
--- Returns:
--- 2
--- 4
--- 6
--- 8
--- 10
+D SELECT * FROM quickjs('[1, 2, 3, 4, 5].map(x => x * 2)');
+┌────────┐
+│ result │
+│  json  │
+├────────┤
+│ 2      │
+│ 4      │
+│ 6      │
+│ 8      │
+│ 10     │
+└────────┘
 
 -- JavaScript filtering
-SELECT * FROM quickjs('[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => x % 2 === 0)');
--- Returns:
--- 2
--- 4
--- 6
--- 8
--- 10
-
--- With parameters (first parameter is parsed as JSON if it's a string)
-SELECT * FROM quickjs('parsed_arg0.map(x => x * arg1)', '[1, 2, 3, 4, 5]', 3);
--- Returns:
--- 3
--- 6
--- 9
--- 12
--- 15
-
--- Multiple parameters
-SELECT * FROM quickjs('parsed_arg0.filter(x => x >= arg1 && x <= arg2)', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]', 3, 7);
--- Returns:
--- 3
--- 4
--- 5
--- 6
--- 7
+D SELECT * FROM quickjs('[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => x % 2 === 0)');
+┌────────┐
+│ result │
+│  json  │
+├────────┤
+│ 2      │
+│ 4      │
+│ 6      │
+│ 8      │
+│ 10     │
+└────────┘
 
 -- String parameters
-SELECT * FROM quickjs('parsed_arg0.map(name => name + " " + arg1)', '["Alice", "Bob", "Charlie"]', 'Smith');
--- Returns:
--- "Alice Smith"
--- "Bob Smith"
--- "Charlie Smith"
+D SELECT * FROM quickjs('parsed_arg0.map(name => name + " " + arg1)', '["Alice", "Bob", "Charlie"]', 'Smith');
+┌─────────────────┐
+│     result      │
+│      json       │
+├─────────────────┤
+│ "Alice Smith"   │
+│ "Bob Smith"     │
+│ "Charlie Smith" │
+└─────────────────┘
+
 ```
 
 **Parameter Naming Convention:**
