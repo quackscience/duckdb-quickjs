@@ -4,7 +4,7 @@
 
 namespace duckdb {
 
-class LuaExtension : public Extension {
+class QuickjsExtension : public Extension {
 public:
 	void Load(ExtensionLoader &) override;
 	std::string Name() override;

@@ -1,0 +1,18 @@
+# name: test/sql/quickjs.test
+# description: test quickjs extension
+# group: [quickjs]
+
+# Require statement will ensure this test is run with this extension loaded
+require quickjs
+
+# Confirm DuckDB works
+query I
+SELECT 1
+----
+1
+
+# a simple test
+query I
+SELECT quickjs('1+2');
+----
+3
