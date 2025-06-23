@@ -12,13 +12,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  duckdb-next-build:
-    name: Build extension binaries
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
-    with:
-      duckdb_version: main
-      ci_tools_version: main
-      extension_name: lua
+#  duckdb-next-build:
+#    name: Build extension binaries
+#    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
+#    with:
+#      duckdb_version: main
+#      ci_tools_version: main
+#      extension_name: lua
 
   duckdb-stable-build:
     # TODO: Requires >= v1.3.1
@@ -28,13 +28,13 @@ jobs:
     with:
       duckdb_version: v1.3.1
       ci_tools_version: v1.3.1
-      extension_name: lua
+      extension_name: quickjs
 
-  code-quality-check:
-    name: Code Quality Check
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_code_quality.yml@main
-    with:
-      duckdb_version: v1.3.1
-      ci_tools_version: main
-      extension_name: lua
-      format_checks: 'format' # ';tidy' doesn't work with vcpkg
+#  code-quality-check:
+#    name: Code Quality Check
+#    uses: duckdb/extension-ci-tools/.github/workflows/_extension_code_quality.yml@main
+#    with:
+#      duckdb_version: v1.3.1
+#      ci_tools_version: main
+#      extension_name: lua
+#      format_checks: 'format' # ';tidy' doesn't work with vcpkg
