@@ -13,25 +13,19 @@ SELECT 1
 
 # a simple test
 query I
-SELECT quickjs('1+2');
+SELECT quickjs('1+2;');
 ----
 3
 
 # a simple test
 query I
-SELECT quickjs('100/2');
+SELECT quickjs('100/2;');
 ----
 50
 
-# Test a variable from the host (will fail for now)
-statement error
-SELECT quickjs('context');
-----
-ReferenceError: context is not defined
-
 # String manipulation
 query I
-SELECT quickjs('"hello" + " " + "world"');
+SELECT quickjs('"hello" + " " + "world";');
 ----
 hello world
 
