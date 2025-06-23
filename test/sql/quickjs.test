@@ -132,3 +132,10 @@ SELECT * FROM quickjs('parsed_arg0.map(name => name + " " + arg1)', '["Alice", "
 "Alice Smith"
 "Bob Smith"
 "Charlie Smith"
+
+# Test that scalar function still works after table function (state leak fix)
+# Note: String literals with nested quotes need to be assigned to variables
+query I
+SELECT quickjs('let msg = "Hello, World!"; msg');
+----
+Hello, World!

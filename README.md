@@ -1,7 +1,3 @@
-[![Extension Test](https://github.com/isaacbrodsky/duckdb-lua/actions/workflows/MainDistributionPipeline.yml/badge.svg)](https://github.com/isaacbrodsky/duckdb-lua/actions/workflows/MainDistributionPipeline.yml)
-[![DuckDB Version](https://img.shields.io/static/v1?label=duckdb&message=v1.3.1&color=blue)](https://github.com/duckdb/duckdb/releases/tag/v1.3.1)
-[![QuickJS Version](https://img.shields.io/static/v1?label=quickjs&message=v2024-01-13&color=blue)](https://github.com/quickjs-ng/quickjs)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 # DuckDB QuickJS Extension
 
@@ -13,15 +9,14 @@ This extension provides an embedded [QuickJS](https://github.com/quickjs-ng/quic
 Executes JavaScript code and returns the result as a string.
 
 ```sql
-SELECT quickjs('"Hello, World!"');
--- Returns: Hello, World!
-
 SELECT quickjs('2 + 2');
 -- Returns: 4
 
-SELECT quickjs('["a", "b", "c"].join(", ")');
--- Returns: a, b, c
+SELECT quickjs('let msg = "Hello, World!"; msg');
+-- Returns: Hello, World!
 ```
+
+**Note:** For string literals with nested quotes, assign them to variables first to avoid parser confusion.
 
 ### `quickjs_eval(function, ...args)`
 Executes a JavaScript function with the provided arguments and returns the result as JSON.
@@ -29,9 +24,6 @@ Executes a JavaScript function with the provided arguments and returns the resul
 ```sql
 SELECT quickjs_eval('(a, b) => a + b', 5, 3);
 -- Returns: 8
-
-SELECT quickjs_eval('(str) => str.toUpperCase()', 'hello world');
--- Returns: "HELLO WORLD"
 ```
 
 ### `quickjs(code, ...args)` (Table Function)
@@ -39,66 +31,22 @@ Executes JavaScript code that returns an array and returns each array element as
 
 ```sql
 -- Simple array
-D SELECT * FROM quickjs('[1, 2, 3, 4, 5]');
-┌────────┐
-│ result │
-│  json  │
-├────────┤
-│ 1      │
-│ 2      │
-│ 3      │
-│ 4      │
-│ 5      │
-└────────┘
+SELECT * FROM quickjs('[1, 2, 3, 4, 5]');
+-- Returns:
+-- 1
+-- 2
+-- 3
+-- 4
+-- 5
 
--- Array of objects
-D SELECT * FROM quickjs('[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]');
-┌───────────────────────────┐
-│          result           │
-│           json            │
-├───────────────────────────┤
-│ {"name":"Alice","age":30} │
-│ {"name":"Bob","age":25}   │
-└───────────────────────────┘
-
-
--- JavaScript computation
-D SELECT * FROM quickjs('[1, 2, 3, 4, 5].map(x => x * 2)');
-┌────────┐
-│ result │
-│  json  │
-├────────┤
-│ 2      │
-│ 4      │
-│ 6      │
-│ 8      │
-│ 10     │
-└────────┘
-
--- JavaScript filtering
-D SELECT * FROM quickjs('[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => x % 2 === 0)');
-┌────────┐
-│ result │
-│  json  │
-├────────┤
-│ 2      │
-│ 4      │
-│ 6      │
-│ 8      │
-│ 10     │
-└────────┘
-
--- String parameters
-D SELECT * FROM quickjs('parsed_arg0.map(name => name + " " + arg1)', '["Alice", "Bob", "Charlie"]', 'Smith');
-┌─────────────────┐
-│     result      │
-│      json       │
-├─────────────────┤
-│ "Alice Smith"   │
-│ "Bob Smith"     │
-│ "Charlie Smith" │
-└─────────────────┘
-
+-- With parameters
+SELECT * FROM quickjs('parsed_arg0.map(x => x * arg1)', '[1, 2, 3, 4, 5]', 3);
+-- Returns:
+-- 3
+-- 6
+-- 9
+-- 12
+-- 15
 ```
 
 **Parameter Naming Convention:**
@@ -110,6 +58,11 @@ D SELECT * FROM quickjs('parsed_arg0.map(name => name + " " + arg1)', '["Alice",
 - **Full JavaScript ES2020 support**: Modern JavaScript features, arrow functions, template literals, etc.
 - **Type conversion**: Automatic conversion between DuckDB and JavaScript data types
 - **Error handling**: JavaScript errors are properly propagated as DuckDB exceptions
+- **State isolation**: Each function call is completely isolated, preventing state leaks between calls
+
+## Examples
+
+For comprehensive examples of all function types and use cases, see the test file: [`test/sql/quickjs.test`](test/sql/quickjs.test)
 
 ## Building
 

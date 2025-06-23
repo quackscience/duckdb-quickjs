@@ -81,14 +81,19 @@ static void QuickJSEval(DataChunk &args, ExpressionState &state, Vector &result)
 		if (!rt) {
 			throw IOException("Failed to create QuickJS runtime.");
 		}
+		
 		JSContext *ctx = JS_NewContext(rt);
 		if (!ctx) {
 			JS_FreeRuntime(rt);
 			throw IOException("Failed to create QuickJS context.");
 		}
 
+		// Create a fresh global object to ensure isolation
+		JSValue global_obj = JS_NewObject(ctx);
+		JS_SetPropertyStr(ctx, global_obj, "console", JS_NewObject(ctx));
+
 		auto script = script_data[i];
-		JSValue func = JS_Eval(ctx, script.GetData(), script.GetSize(), "<eval>", JS_EVAL_TYPE_GLOBAL);
+		JSValue func = JS_Eval(ctx, script.GetData(), script.GetSize(), "<eval>", JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
 
 		if (JS_IsException(func)) {
 			JSValue exception = JS_GetException(ctx);
@@ -97,14 +102,20 @@ static void QuickJSEval(DataChunk &args, ExpressionState &state, Vector &result)
 			JS_FreeCString(ctx, exception_c_str);
 			JS_FreeValue(ctx, exception);
 			JS_FreeValue(ctx, func);
+			JS_FreeValue(ctx, global_obj);
 			JS_FreeContext(ctx);
+			JS_RunGC(rt);
+			JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 			JS_FreeRuntime(rt);
 			throw InvalidInputException(exception_str);
 		}
 
 		if (!JS_IsFunction(ctx, func)) {
 			JS_FreeValue(ctx, func);
+			JS_FreeValue(ctx, global_obj);
 			JS_FreeContext(ctx);
+			JS_RunGC(rt);
+			JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 			JS_FreeRuntime(rt);
 			throw InvalidInputException("First argument to js_eval must be a function");
 		}
@@ -117,7 +128,6 @@ static void QuickJSEval(DataChunk &args, ExpressionState &state, Vector &result)
 			js_args.push_back(DuckDBValueToJSValue(ctx, val));
 		}
 
-		JSValue global_obj = JS_GetGlobalObject(ctx);
 		JSValue js_result = JS_Call(ctx, func, global_obj, n_js_args, js_args.data());
 
 		for (auto &arg : js_args) {
@@ -134,6 +144,8 @@ static void QuickJSEval(DataChunk &args, ExpressionState &state, Vector &result)
 			JS_FreeValue(ctx, exception);
 			JS_FreeValue(ctx, js_result);
 			JS_FreeContext(ctx);
+			JS_RunGC(rt);
+			JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 			JS_FreeRuntime(rt);
 			throw InvalidInputException(exception_str);
 		}
@@ -149,6 +161,8 @@ static void QuickJSEval(DataChunk &args, ExpressionState &state, Vector &result)
 			JS_FreeValue(ctx, exception);
 			JS_FreeValue(ctx, json_string_val);
 			JS_FreeContext(ctx);
+			JS_RunGC(rt);
+			JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 			JS_FreeRuntime(rt);
 			throw InvalidInputException("Failed to stringify result to JSON: %s", exception_str);
 		}
@@ -160,6 +174,8 @@ static void QuickJSEval(DataChunk &args, ExpressionState &state, Vector &result)
 		JS_FreeValue(ctx, json_string_val);
 
 		JS_FreeContext(ctx);
+		JS_RunGC(rt);
+		JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 		JS_FreeRuntime(rt);
 	}
 }
@@ -168,8 +184,21 @@ static void QuickJSExecute(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &script_vector = args.data[0];
 	UnaryExecutor::Execute<string_t, string_t>(script_vector, result, args.size(), [&](string_t script) {
 		JSRuntime *rt = JS_NewRuntime();
+		if (!rt) {
+			throw IOException("Failed to create QuickJS runtime.");
+		}
+		
 		JSContext *ctx = JS_NewContext(rt);
-		JSValue val = JS_Eval(ctx, script.GetData(), script.GetSize(), "<eval>", JS_EVAL_TYPE_GLOBAL);
+		if (!ctx) {
+			JS_FreeRuntime(rt);
+			throw IOException("Failed to create QuickJS context.");
+		}
+		
+		// Create a fresh global object to ensure isolation
+		JSValue global_obj = JS_NewObject(ctx);
+		JS_SetPropertyStr(ctx, global_obj, "console", JS_NewObject(ctx));
+
+		JSValue val = JS_Eval(ctx, script.GetData(), script.GetSize(), "<eval>", JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
 
 		if (JS_IsException(val)) {
 			JSValue exception = JS_GetException(ctx);
@@ -179,7 +208,10 @@ static void QuickJSExecute(DataChunk &args, ExpressionState &state, Vector &resu
 
 			JS_FreeValue(ctx, exception);
 			JS_FreeValue(ctx, val);
+			JS_FreeValue(ctx, global_obj);
 			JS_FreeContext(ctx);
+			JS_RunGC(rt);
+			JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 			JS_FreeRuntime(rt);
 
 			throw InvalidInputException(exception_str);
@@ -190,7 +222,10 @@ static void QuickJSExecute(DataChunk &args, ExpressionState &state, Vector &resu
 		JS_FreeCString(ctx, c_str);
 
 		JS_FreeValue(ctx, val);
+		JS_FreeValue(ctx, global_obj);
 		JS_FreeContext(ctx);
+		JS_RunGC(rt);
+		JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 		JS_FreeRuntime(rt);
 		return result_str;
 	});
@@ -257,11 +292,16 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 	if (!rt) {
 		throw IOException("Failed to create QuickJS runtime.");
 	}
+	
 	JSContext *ctx = JS_NewContext(rt);
 	if (!ctx) {
 		JS_FreeRuntime(rt);
 		throw IOException("Failed to create QuickJS context.");
 	}
+
+	// Create a fresh global object to ensure isolation
+	JSValue global_obj = JS_NewObject(ctx);
+	JS_SetPropertyStr(ctx, global_obj, "console", JS_NewObject(ctx));
 
 	// Create a function that takes the parameters and returns the result
 	std::string js_function_code = "(function(";
@@ -279,7 +319,7 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 	js_function_code += "return " + bind_data.js_code + "; })";
 
 	// Compile the function
-	JSValue func_val = JS_Eval(ctx, js_function_code.c_str(), js_function_code.length(), "<eval>", JS_EVAL_TYPE_GLOBAL);
+	JSValue func_val = JS_Eval(ctx, js_function_code.c_str(), js_function_code.length(), "<eval>", JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
 	if (JS_IsException(func_val)) {
 		JSValue exception = JS_GetException(ctx);
 		const char *exception_c_str = JS_ToCString(ctx, exception);
@@ -287,7 +327,10 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 		JS_FreeCString(ctx, exception_c_str);
 		JS_FreeValue(ctx, exception);
 		JS_FreeValue(ctx, func_val);
+		JS_FreeValue(ctx, global_obj);
 		JS_FreeContext(ctx);
+		JS_RunGC(rt);
+		JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 		JS_FreeRuntime(rt);
 		throw InvalidInputException("Failed to compile JavaScript function: %s", exception_str);
 	}
@@ -299,7 +342,7 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 	}
 
 	// Call the function
-	JSValue val = JS_Call(ctx, func_val, JS_UNDEFINED, js_args.size(), js_args.data());
+	JSValue val = JS_Call(ctx, func_val, global_obj, js_args.size(), js_args.data());
 
 	// Clean up function and arguments
 	JS_FreeValue(ctx, func_val);
@@ -314,7 +357,10 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 		JS_FreeCString(ctx, exception_c_str);
 		JS_FreeValue(ctx, exception);
 		JS_FreeValue(ctx, val);
+		JS_FreeValue(ctx, global_obj);
 		JS_FreeContext(ctx);
+		JS_RunGC(rt);
+		JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 		JS_FreeRuntime(rt);
 		throw InvalidInputException(exception_str);
 	}
@@ -322,7 +368,10 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 	// Check if the result is an array
 	if (!JS_IsArray(val)) {
 		JS_FreeValue(ctx, val);
+		JS_FreeValue(ctx, global_obj);
 		JS_FreeContext(ctx);
+		JS_RunGC(rt);
+		JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 		JS_FreeRuntime(rt);
 		throw InvalidInputException("JavaScript code must return an array");
 	}
@@ -349,7 +398,10 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 			JS_FreeValue(ctx, exception);
 			JS_FreeValue(ctx, json_string_val);
 			JS_FreeValue(ctx, val);
+			JS_FreeValue(ctx, global_obj);
 			JS_FreeContext(ctx);
+			JS_RunGC(rt);
+			JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 			JS_FreeRuntime(rt);
 			throw InvalidInputException("Failed to stringify result to JSON: %s", exception_str);
 		}
@@ -364,9 +416,11 @@ static unique_ptr<GlobalTableFunctionState> QuickJSTableInit(ClientContext &cont
 	}
 
 	JS_FreeValue(ctx, val);
+	JS_FreeValue(ctx, global_obj);
 	JS_FreeContext(ctx);
+	JS_RunGC(rt);
+	JS_RunGC(rt);  // Run GC twice to ensure complete cleanup
 	JS_FreeRuntime(rt);
-
 	return std::move(result);
 }
 
