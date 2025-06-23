@@ -69,3 +69,78 @@ statement error
 SELECT quickjs_eval('(a,b) => a.nonExistentMethod()', 1, 2);
 ----
 TypeError
+
+# Test table function
+query I
+SELECT * FROM quickjs('[1, 2, 3, 4, 5, "hello", "world"]');
+----
+1
+2
+3
+4
+5
+"hello"
+"world"
+
+# Test table function with more complex data
+query I
+SELECT * FROM quickjs('[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]');
+----
+{"name":"Alice","age":30}
+{"name":"Bob","age":25}
+
+# Test table function with JavaScript computation
+query I
+SELECT * FROM quickjs('[1, 2, 3, 4, 5].map(x => x * 2)');
+----
+2
+4
+6
+8
+10
+
+# Test table function with JavaScript filtering
+query I
+SELECT * FROM quickjs('[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => x % 2 === 0)');
+----
+2
+4
+6
+8
+10
+
+# Test table function with JavaScript objects
+query I
+SELECT * FROM quickjs('[{"id": 1, "value": "a"}, {"id": 2, "value": "b"}, {"id": 3, "value": "c"}]');
+----
+{"id":1,"value":"a"}
+{"id":2,"value":"b"}
+{"id":3,"value":"c"}
+
+# Test table function with parameters
+query I
+SELECT * FROM quickjs('parsed_arg0.map(x => x * arg1)', '[1, 2, 3, 4, 5]', 3);
+----
+3
+6
+9
+12
+15
+
+# Test table function with multiple parameters
+query I
+SELECT * FROM quickjs('parsed_arg0.filter(x => x >= arg1 && x <= arg2)', '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]', 3, 7);
+----
+3
+4
+5
+6
+7
+
+# Test table function with string parameters
+query I
+SELECT * FROM quickjs('parsed_arg0.map(name => name + " " + arg1)', '["Alice", "Bob", "Charlie"]', 'Smith');
+----
+"Alice Smith"
+"Bob Smith"
+"Charlie Smith"
