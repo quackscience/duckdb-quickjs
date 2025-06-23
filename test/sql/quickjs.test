@@ -22,3 +22,50 @@ query I
 SELECT quickjs('100/2');
 ----
 50
+
+# Test a variable from the host (will fail for now)
+statement error
+SELECT quickjs('context');
+----
+ReferenceError: context is not defined
+
+# String manipulation
+query I
+SELECT quickjs('"hello" + " " + "world"');
+----
+hello world
+
+query I
+SELECT quickjs('"test".toUpperCase()');
+----
+TEST
+
+# Confirm the extension works
+query I
+SELECT quickjs('10;');
+----
+10
+
+# Confirm the extension works with eval
+query I
+SELECT quickjs_eval('(a,b,c) => a+b+c', 1,5,4);
+----
+10
+
+# Test string concatenation
+query I
+SELECT quickjs_eval('(a,b) => a + " " + b', 'hello', 'world');
+----
+"hello world"
+
+# Test with different data types
+query I
+SELECT quickjs_eval('(a,b) => a * b', 3.5, 2);
+----
+7
+
+# Test error handling
+statement error
+SELECT quickjs_eval('(a,b) => a.nonExistentMethod()', 1, 2);
+----
+TypeError
