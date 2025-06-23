@@ -5,7 +5,7 @@ This extension provides an embedded [QuickJS](https://github.com/quickjs-ng/quic
 
 ## Functions
 
-### `quickjs(code)`
+### Scalar `quickjs(code)`
 Executes JavaScript code and returns the result as a string.
 
 ```sql
@@ -18,7 +18,7 @@ SELECT quickjs('let msg = "Hello, World!"; msg');
 
 **Note:** For string literals with nested quotes, assign them to variables first to avoid parser confusion.
 
-### `quickjs_eval(function, ...args)`
+### Scalar `quickjs_eval(function, ...args)`
 Executes a JavaScript function with the provided arguments and returns the result as JSON.
 
 ```sql
@@ -26,7 +26,7 @@ SELECT quickjs_eval('(a, b) => a + b', 5, 3);
 -- Returns: 8
 ```
 
-### `quickjs(code, ...args)` (Table Function)
+### Table `quickjs(code, ...args)`
 Executes JavaScript code that returns an array and returns each array element as a separate row in a table. Accepts optional parameters that can be passed to the JavaScript function.
 
 ```sql
