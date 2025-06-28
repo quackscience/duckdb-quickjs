@@ -24,7 +24,6 @@ Executes a JavaScript function with the provided arguments and returns the resul
 
 ```sql
 SELECT quickjs_eval('(a, b) => a + b', 5, 3);
--- Returns: 8
 ```
 
 ### Table `quickjs(code, ...args)`
@@ -33,26 +32,72 @@ Executes JavaScript code that returns an array and returns each array element as
 ```sql
 -- Simple array
 SELECT * FROM quickjs('[1, 2, 3, 4, 5]');
--- Returns:
--- 1
--- 2
--- 3
--- 4
--- 5
 
 -- With parameters
 SELECT * FROM quickjs('parsed_arg0.map(x => x * arg1)', '[1, 2, 3, 4, 5]', 3);
--- Returns:
--- 3
--- 6
--- 9
--- 12
--- 15
 ```
 
 **Parameter Naming Convention:**
 - `arg0`, `arg1`, `arg2`, etc. - Access to the raw parameters passed to the function
 - `parsed_arg0` - The first parameter parsed as JSON (if it's a string). This is useful when passing arrays or objects as the first parameter.
+
+### Advanced Examples
+The following example is courtesy of [hrbrmstr](https://dailydrop.hrbrmstr.dev/2025/06/27/drop-672-2025-06-27-if-it-walks-like-a/)
+
+Import some data from a local or remote dataset into your DuckDB session
+
+```sql
+CREATE TABLE events AS (FROM read_csv('~/Downloads/id-eventtype-payload.csv'));
+> FROM events;
+┌───────┬────────────┬────────────────────────────────────────────────────────────────────────────────┐
+│  id   │ event_type │                                    payload                                     │
+│ int64 │  varchar   │                                    varchar                                     │
+├───────┼────────────┼────────────────────────────────────────────────────────────────────────────────┤
+│     1 │ login      │ {"user":"alice","ip":"192.168.1.2","meta":{"device":"mobile","os":"iOS 17.2"}} │
+│     2 │ login      │ {"user":"bob","ip":"10.0.0.5","meta":{"device":"desktop","os":"Windows 11"}}   │
+│     3 │ purchase   │ {"user":"carol","amount":19.99,"meta":{"item":"book","category":"fiction"}}    │
+└───────┴────────────┴────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Query your data using the QuickJS Extension as an alternative JSON parser
+
+```sql
+FROM events
+SELECT
+  id,
+  event_type,
+  quickjs_eval(
+    '(event_type, payload) => {
+      let data = JSON.parse(payload);
+      if (event_type === "login") {
+        return {
+          user: data.user,
+          device: data.meta.device,
+          os: data.meta.os
+        };
+      } else if (event_type === "purchase") {
+        return {
+          user: data.user,
+          item: data.meta.item,
+          category: data.meta.category,
+          amount: data.amount
+        };
+      } else {
+        return null;
+      }
+    }',
+    event_type, payload
+  ) AS extracted;
+
+┌───────┬────────────┬────────────────────────────────────────────────────────────────────┐
+│  id   │ event_type │                             extracted                              │
+│ int64 │  varchar   │                                json                                │
+├───────┼────────────┼────────────────────────────────────────────────────────────────────┤
+│     1 │ login      │ {"user":"alice","device":"mobile","os":"iOS 17.2"}                 │
+│     2 │ login      │ {"user":"bob","device":"desktop","os":"Windows 11"}                │
+│     3 │ purchase   │ {"user":"carol","item":"book","category":"fiction","amount":19.99} │
+└───────┴────────────┴────────────────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
